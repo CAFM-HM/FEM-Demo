@@ -311,9 +311,16 @@ export function useAdminData() {
     setLoading(true);
     try {
       const knownTeachers = [];
-      const teacherIds = [
-        'demo-teacher-001'
-      ];
+
+      // Load teacher UIDs from registry
+      let teacherIds = ['demo-teacher-001'];
+      try {
+        const regSnap = await getDoc(doc(db, 'config', 'teacherRegistry'));
+        if (regSnap.exists() && regSnap.data().uids) {
+          teacherIds = regSnap.data().uids;
+        }
+      } catch (e) {}
+
       for (const uid of teacherIds) {
         const teacherData = { uid, classes: [] };
         try {
