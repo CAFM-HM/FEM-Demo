@@ -105,6 +105,10 @@ window.seedData = async function() {
       }
     }
 
+    // Create parent teacher document first
+    await setDoc(doc(db, 'teachers', DEMO_TEACHER), { createdAt: new Date().toISOString() });
+    log('  ✓ Teacher document created');
+
     await setDoc(doc(db, 'teachers', DEMO_TEACHER, 'classes', cls.id), {
       cls: cls.cls, quarter: 'Q4', roster: cls.roster, scores
     });
