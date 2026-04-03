@@ -166,11 +166,14 @@ window.seedData = async function() {
   });
   log('  ✓ Announcement set');
 
-  // 5. Seed teacher display name
+  // 5. Seed teacher display name and registry
   await setDoc(doc(db, 'config', 'teacherNames'), {
     [DEMO_TEACHER]: 'Demo Teacher'
   });
-  log('  ✓ Teacher name set');
+  await setDoc(doc(db, 'config', 'teacherRegistry'), {
+    uids: [DEMO_TEACHER]
+  });
+  log('  ✓ Teacher name and registry set');
 
   log('\n✅ Demo data seeded! Visit the demo app to see it in action.');
   document.getElementById('seedBtn').disabled = false;
