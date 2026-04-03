@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html><head><title>FME — Test Seed</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+  button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #1B3A5C; color: #fff; border: none; border-radius: 8px; }
+  #log { background: #f5f5f5; padding: 16px; border-radius: 8px; margin-top: 20px; font-size: 13px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Test Seed — Minimal</h1>
+<button onclick="testSeed()">Test Write</button>
+<div id="log"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAZnmJeVJgiOM3n8tAt7KlorJeo3-q2LVo",
+  authDomain: "fme-demo-e0f39.firebaseapp.com",
+  projectId: "fme-demo-e0f39",
+  storageBucket: "fme-demo-e0f39.firebasestorage.app",
+  messagingSenderId: "405830702708",
+  appId: "1:405830702708:web:38fbcae1780b13e8a26321"
+});
+const db = getFirestore(app);
+const log = (msg) => { document.getElementById('log').textContent += msg + '\n'; };
+
+window.testSeed = async function() {
+  log('Step 1: Writing parent doc...');
+  try {
+    await setDoc(doc(db, 'teachers', 'demo-teacher-001'), { test: true });
+    log('  ✓ Parent doc written');
+  } catch(e) {
+    log('  ✗ FAILED: ' + e.message);
+    log('  Code: ' + e.code);
+    return;
+  }
+
+  log('Step 2: Writing class doc...');
+  try {
+    await setDoc(doc(db, 'teachers', 'demo-teacher-001', 'classes', 'test-class'), {
+      cls: 'Test Class',
+      quarter: 'Q4',
+      roster: ['Thomas Aquinas', 'Catherine Siena'],
+      scores: {
+        '2026-04-01': {
+          'Thomas Aquinas': { D: 4, A: 5, C: 4, I: 3 },
+          'Catherine Siena': { D: 5, A: 4, C: 5, I: 4 }
+        }
+      }
+    });
+    log('  ✓ Class doc written');
+  } catch(e) {
+    log('  ✗ FAILED: ' + e.message);
+    log('  Code: ' + e.code);
+    return;
+  }
+
+  log('Step 3: Reading back...');
+  try {
+    const snap = await getDocs(collection(db, 'teachers', 'demo-teacher-001', 'classes'));
+    log('  Found ' + snap.size + ' classes');
+    snap.forEach(d => log('    - ' + d.id + ': ' + d.data().cls));
+  } catch(e) {
+    log('  ✗ READ FAILED: ' + e.message);
+  }
+
+  log('\nDone!');
+};
+</script>
+</body>
+</html>
