@@ -74,8 +74,14 @@ export default function StudentReport({ studentName, onClose }) {
       setHousePoints(allEntries);
       setConductEntries(allEntries);
 
-      // Participation + narratives
-      const teacherIds = ['demo-teacher-001'];
+      // Participation + narratives — load teacher IDs from registry
+      let teacherIds = ['demo-teacher-001'];
+      try {
+        const regSnap = await getDoc(doc(db, 'config', 'teacherRegistry'));
+        if (regSnap.exists() && regSnap.data().uids) {
+          teacherIds = regSnap.data().uids;
+        }
+      } catch (e) {}
       const classes = [];
       const foundNarratives = [];
 
