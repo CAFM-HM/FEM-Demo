@@ -2,7 +2,7 @@
   "name": "cafm-participation-tool",
   "version": "2.0.0",
   "private": true,
-  "homepage": "https://cafm-hm.github.io/fme-demo",
+  "homepage": "https://cafm-hm.github.io/FEM-Demo",
   "dependencies": {
     "firebase": "^10.12.0",
     "react": "^18.3.0",
