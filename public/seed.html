@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html><head><title>FME Demo — Seed Data</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+  button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #1B3A5C; color: #fff; border: none; border-radius: 8px; margin: 8px 4px; }
+  button:disabled { opacity: 0.5; }
+  #log { background: #f5f5f5; padding: 16px; border-radius: 8px; margin-top: 20px; font-size: 13px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<h1>FME Demo — Seed Sample Data</h1>
+<p>Click the button below to populate the demo database with sample students, classes, scores, house points, and narratives.</p>
+<button id="seedBtn" onclick="seedData()">🌱 Seed Demo Data</button>
+<button onclick="clearData()">🗑 Clear All Data</button>
+<div id="log"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAZnmJeVJgiOM3n8tAt7KlorJeo3-q2LVo",
+  authDomain: "fme-demo-e0f39.firebaseapp.com",
+  projectId: "fme-demo-e0f39",
+  storageBucket: "fme-demo-e0f39.firebasestorage.app",
+  messagingSenderId: "405830702708",
+  appId: "1:405830702708:web:38fbcae1780b13e8a26321"
+});
+const db = getFirestore(app);
+const log = (msg) => { document.getElementById('log').textContent += msg + '\n'; };
+
+const HOUSES = ['Augustine', 'Athanasius', 'Chrysostom', 'Ambrose'];
+
+const STUDENTS = [
+  { name: 'Thomas Aquinas', house: 'Augustine', gender: 'he' },
+  { name: 'Catherine Siena', house: 'Augustine', gender: 'she' },
+  { name: 'Francis Xavier', house: 'Augustine', gender: 'he' },
+  { name: 'Therese Lisieux', house: 'Augustine', gender: 'she' },
+  { name: 'John Bosco', house: 'Augustine', gender: 'he' },
+  { name: 'Clare Assisi', house: 'Athanasius', gender: 'she' },
+  { name: 'Patrick Ireland', house: 'Athanasius', gender: 'he' },
+  { name: 'Maria Goretti', house: 'Athanasius', gender: 'she' },
+  { name: 'Maximilian Kolbe', house: 'Athanasius', gender: 'he' },
+  { name: 'Kateri Tekakwitha', house: 'Athanasius', gender: 'she' },
+  { name: 'Augustine Hippo', house: 'Chrysostom', gender: 'he' },
+  { name: 'Elizabeth Seton', house: 'Chrysostom', gender: 'she' },
+  { name: 'Ignatius Loyola', house: 'Chrysostom', gender: 'he' },
+  { name: 'Joan Arc', house: 'Chrysostom', gender: 'she' },
+  { name: 'Philip Neri', house: 'Chrysostom', gender: 'he' },
+  { name: 'Benedict Nursia', house: 'Ambrose', gender: 'he' },
+  { name: 'Teresa Avila', house: 'Ambrose', gender: 'she' },
+  { name: 'Francis Sales', house: 'Ambrose', gender: 'he' },
+  { name: 'Rose Lima', house: 'Ambrose', gender: 'she' },
+  { name: 'Dominic Guzman', house: 'Ambrose', gender: 'he' },
+];
+
+const DEMO_TEACHER = 'demo-teacher-001';
+const CLASSES = [
+  { id: 'ancient-history', cls: 'Ancient History', roster: STUDENTS.slice(0, 12).map(s => s.name) },
+  { id: 'theology-i', cls: 'Theology I', roster: STUDENTS.slice(0, 10).map(s => s.name) },
+  { id: 'literature-9', cls: 'Literature 9', roster: STUDENTS.slice(5, 17).map(s => s.name) },
+  { id: 'euclidean-geometry', cls: 'Euclidean Geometry', roster: STUDENTS.slice(8, 20).map(s => s.name) },
+];
+
+function randomScore() { return Math.floor(Math.random() * 3) + 3; } // 3-5
+function randomLowScore() { return Math.floor(Math.random() * 3) + 1; } // 1-3
+
+window.seedData = async function() {
+  document.getElementById('seedBtn').disabled = true;
+  log('Starting seed...');
+
+  // 1. Seed master roster
+  log('Seeding students...');
+  for (const s of STUDENTS) {
+    await setDoc(doc(db, 'students', s.name.replace(/\s/g, '-').toLowerCase()), {
+      name: s.name, house: s.house, gender: s.gender,
+      parentEmail: '', studentEmail: '', createdAt: new Date().toISOString()
+    });
+  }
+  log(`  ✓ ${STUDENTS.length} students added`);
+
+  // 2. Seed classes with scores
+  log('Seeding classes and scores...');
+  for (const cls of CLASSES) {
+    const scores = {};
+    const dates = [];
+    for (let d = 20; d >= 1; d--) {
+      const date = new Date();
+      date.setDate(date.getDate() - d);
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+      dates.push(date.toISOString().split('T')[0]);
+    }
+
+    for (const dateStr of dates) {
+      scores[dateStr] = {};
+      for (const name of cls.roster) {
+        // Most students score 3-5, a few score lower
+        const isStruggling = name === 'Augustine Hippo' || name === 'Joan Arc';
+        scores[dateStr][name] = {
+          D: isStruggling ? randomLowScore() : randomScore(),
+          A: isStruggling ? randomLowScore() : randomScore(),
+          C: randomScore(),
+          I: isStruggling ? randomLowScore() : randomScore(),
+        };
+      }
+    }
+
+    await setDoc(doc(db, 'teachers', DEMO_TEACHER, 'classes', cls.id), {
+      cls: cls.cls, quarter: 'Q4', roster: cls.roster, scores
+    });
+    log(`  ✓ ${cls.cls} — ${cls.roster.length} students, ${dates.length} days scored`);
+  }
+
+  // 3. Seed house point entries
+  log('Seeding house points...');
+  const MERIT_CATS = ['Virtue', 'Academic', 'Service', 'Leadership', 'Sportsmanship'];
+  const DEMERIT_CATS = ['Dress Code Violation', 'Tardy to Class', 'Disruptive Behavior', 'Phone Violation'];
+  let hpCount = 0;
+
+  for (const s of STUDENTS) {
+    // Random merits (1-4 per student)
+    const numMerits = Math.floor(Math.random() * 4) + 1;
+    for (let i = 0; i < numMerits; i++) {
+      const pts = [1, 3, 7][Math.floor(Math.random() * 3)];
+      await addDoc(collection(db, 'housePointEntries'), {
+        studentName: s.name, house: s.house, points: pts,
+        category: MERIT_CATS[Math.floor(Math.random() * MERIT_CATS.length)],
+        reason: 'Demo merit', type: 'merit', target: 'student',
+        addedBy: DEMO_TEACHER, createdAt: new Date(Date.now() - Math.random() * 2592000000).toISOString()
+      });
+      hpCount++;
+    }
+
+    // Some students get demerits
+    if (Math.random() < 0.3) {
+      const numDemerits = Math.floor(Math.random() * 3) + 1;
+      for (let i = 0; i < numDemerits; i++) {
+        const pts = [1, 3][Math.floor(Math.random() * 2)];
+        await addDoc(collection(db, 'housePointEntries'), {
+          studentName: s.name, house: s.house, points: -pts,
+          category: DEMERIT_CATS[Math.floor(Math.random() * DEMERIT_CATS.length)],
+          reason: 'Demo demerit', type: 'demerit', target: 'student',
+          addedBy: DEMO_TEACHER, createdAt: new Date(Date.now() - Math.random() * 2592000000).toISOString()
+        });
+        hpCount++;
+      }
+    }
+  }
+
+  // House-level awards
+  for (const house of HOUSES) {
+    await addDoc(collection(db, 'housePointEntries'), {
+      studentName: '', house, points: Math.floor(Math.random() * 10) + 5,
+      category: 'House Merit', reason: 'House spirit award', type: 'merit', target: 'house',
+      addedBy: DEMO_TEACHER, createdAt: new Date().toISOString()
+    });
+    hpCount++;
+  }
+  log(`  ✓ ${hpCount} house point entries`);
+
+  // 4. Seed announcement
+  log('Seeding announcement...');
+  await setDoc(doc(db, 'config', 'announcement'), {
+    message: 'Welcome to the FME Demo! Explore all the features — Daily Tracker, Narrative Builder, House Points, and more.',
+    updatedAt: new Date().toISOString()
+  });
+  log('  ✓ Announcement set');
+
+  // 5. Seed teacher display name
+  await setDoc(doc(db, 'config', 'teacherNames'), {
+    [DEMO_TEACHER]: 'Demo Teacher'
+  });
+  log('  ✓ Teacher name set');
+
+  log('\n✅ Demo data seeded! Visit the demo app to see it in action.');
+  document.getElementById('seedBtn').disabled = false;
+};
+
+window.clearData = async function() {
+  if (!confirm('Delete ALL demo data? This cannot be undone.')) return;
+  log('Clearing all data...');
+
+  const collections = ['students', 'housePointEntries'];
+  for (const col of collections) {
+    const snap = await getDocs(collection(db, col));
+    for (const d of snap.docs) { await deleteDoc(d.ref); }
+    log(`  ✓ Cleared ${col} (${snap.size} docs)`);
+  }
+
+  // Clear teacher classes
+  try {
+    const classSnap = await getDocs(collection(db, 'teachers', 'demo-teacher-001', 'classes'));
+    for (const d of classSnap.docs) { await deleteDoc(d.ref); }
+    log(`  ✓ Cleared demo teacher classes (${classSnap.size})`);
+  } catch(e) {}
+
+  log('\n✅ All demo data cleared.');
+};
+</script>
+</body>
+</html>
