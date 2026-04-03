@@ -81,10 +81,19 @@ window.seedData = async function() {
 
   // 2. Seed classes with scores
   log('Seeding classes and scores...');
+
+  // Create parent teacher document first
+  try {
+    await setDoc(doc(db, 'teachers', DEMO_TEACHER), { createdAt: new Date().toISOString() });
+    log('  ✓ Teacher document created');
+  } catch (err) {
+    log('  ✗ Error creating teacher doc: ' + err.message);
+  }
+
   for (const cls of CLASSES) {
     const scores = {};
     const dates = [];
-    for (let d = 20; d >= 1; d--) {
+    for (let d = 10; d >= 1; d--) {
       const date = new Date();
       date.setDate(date.getDate() - d);
       if (date.getDay() === 0 || date.getDay() === 6) continue;
@@ -94,7 +103,6 @@ window.seedData = async function() {
     for (const dateStr of dates) {
       scores[dateStr] = {};
       for (const name of cls.roster) {
-        // Most students score 3-5, a few score lower
         const isStruggling = name === 'Augustine Hippo' || name === 'Joan Arc';
         scores[dateStr][name] = {
           D: isStruggling ? randomLowScore() : randomScore(),
@@ -105,14 +113,14 @@ window.seedData = async function() {
       }
     }
 
-    // Create parent teacher document first
-    await setDoc(doc(db, 'teachers', DEMO_TEACHER), { createdAt: new Date().toISOString() });
-    log('  ✓ Teacher document created');
-
-    await setDoc(doc(db, 'teachers', DEMO_TEACHER, 'classes', cls.id), {
-      cls: cls.cls, quarter: 'Q4', roster: cls.roster, scores
-    });
-    log(`  ✓ ${cls.cls} — ${cls.roster.length} students, ${dates.length} days scored`);
+    try {
+      await setDoc(doc(db, 'teachers', DEMO_TEACHER, 'classes', cls.id), {
+        cls: cls.cls, quarter: 'Q4', roster: cls.roster, scores
+      });
+      log(`  ✓ ${cls.cls} — ${cls.roster.length} students, ${dates.length} days scored`);
+    } catch (err) {
+      log(`  ✗ Error creating ${cls.cls}: ${err.message}`);
+    }
   }
 
   // 3. Seed house point entries
